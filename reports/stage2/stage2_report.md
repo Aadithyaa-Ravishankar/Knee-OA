@@ -1,0 +1,119 @@
+# Stage 2 — Preprocessing Pipeline Report
+
+**Project:** Anatomy-Aware Explainable AI for Knee OA Severity Classification  
+**Stage:** 2 — Dataset Preprocessing & DataLoader Foundation  
+**Date:** 2026-10-06
+
+---
+
+## 2.1 Report & Output Organization
+
+All stage reports are now saved to `reports/stageN/`:
+
+```
+knee_oa_xai/
+├── reports/
+│   ├── stage1/
+│   │   ├── audit_report.md         ← Stage 1 dataset audit
+│   │   ├── full_inventory.csv      ← Per-image inventory CSV
+│   │   └── figures/                ← Distribution charts, sample X-rays
+│   └── stage2/
+│       ├── stage2_report.md        ← This file
+│       └── normalization_stats.json
+```
+
+---
+
+## 2.2 Normalization Statistics
+
+Computed via **Welford's online algorithm** over all **5,778 training images** (pixel-level, grayscale [0, 1] range).
+
+| Statistic | Value |
+|-----------|-------|
+| Training images scanned | 5,778 |
+| Total pixels processed | 289,533,696 |
+| **Mean (grayscale)** | **0.578707** |
+| **Std (grayscale)** | **0.127051** |
+| 3-channel mean | [0.578707, 0.578707, 0.578707] |
+| 3-channel std | [0.127051, 0.127051, 0.127051] |
+
+> **Note:** X-ray mean (0.578) is noticeably higher than ImageNet mean (0.485) — expected, since X-rays tend to have many bright (high-intensity) bone and tissue regions. The std (0.127) is narrow compared to ImageNet (0.229), indicating moderate contrast uniformity across the dataset.
+
+These values have been written into:
+- [`src/preprocessing/transforms.py`](file:///Users/aadithyaaravishankar/Desktop/KNEE%20OA/knee_oa_xai/src/preprocessing/transforms.py) (`TRAIN_MEAN_*` / `TRAIN_STD_*`)
+- [`configs/config.yaml`](file:///Users/aadithyaaravishankar/Desktop/KNEE%20OA/knee_oa_xai/configs/config.yaml) (`preprocessing.mean_*/std_*`)
+
+---
+
+## 2.3 Files Created This Stage
+
+| File | Purpose |
+|------|---------|
+| [`src/preprocessing/dataset.py`](file:///Users/aadithyaaravishankar/Desktop/KNEE%20OA/knee_oa_xai/src/preprocessing/dataset.py) | PyTorch `Dataset` class with class-weight utilities |
+| [`src/preprocessing/transforms.py`](file:///Users/aadithyaaravishankar/Desktop/KNEE%20OA/knee_oa_xai/src/preprocessing/transforms.py) | CLAHE + Normalize transforms (1ch & 3ch variants) |
+| [`src/preprocessing/dataloader.py`](file:///Users/aadithyaaravishankar/Desktop/KNEE%20OA/knee_oa_xai/src/preprocessing/dataloader.py) | `build_dataloaders()` with `WeightedRandomSampler` |
+| [`src/preprocessing/compute_stats.py`](file:///Users/aadithyaaravishankar/Desktop/KNEE%20OA/knee_oa_xai/src/preprocessing/compute_stats.py) | Pixel-level mean/std computation (Welford) |
+| [`src/preprocessing/__init__.py`](file:///Users/aadithyaaravishankar/Desktop/KNEE%20OA/knee_oa_xai/src/preprocessing/__init__.py) | Package exports |
+| [`configs/config.yaml`](file:///Users/aadithyaaravishankar/Desktop/KNEE%20OA/knee_oa_xai/configs/config.yaml) | Central project configuration |
+| `reports/stage2/normalization_stats.json` | Computed stats (JSON) |
+
+---
+
+## 2.4 Design Decisions
+
+### CLAHE (clip_limit=2.0, tile=8×8)
+- Applied **before** ToTensor to preserve the numpy/PIL processing path
+- Clip limit of 2.0 is conservative — avoids over-amplifying noise in X-rays while still enhancing cartilage/bone contrast meaningfully
+- Tile size 8×8 on a 224×224 image → each tile is 28×28 px (appropriate granularity)
+
+### WeightedRandomSampler vs. Class-Weighted Loss
+- Both are used: sampler addresses **batch composition imbalance**, loss weights address **gradient imbalance**
+- Sampler oversamples minority KL-3/KL-4 during training — every batch will see all classes approximately equally
+- Applied only to `train` split; val/test use standard sequential loading
+
+### 3-Channel Repeat for ResNet-50
+- `GrayscaleToRGB()` repeats the single channel 3×: tensor shape `(1,H,W)` → `(3,H,W)`
+- This is the standard approach for pretrained ImageNet models on grayscale medical images
+- Normalization stats are therefore the same value repeated across all 3 channels
+
+---
+
+## 2.5 Class Weights (Train Split)
+
+Computed via inverse-frequency weighting `N / (C × n_c)`:
+
+| KL Grade | Train Count | Class Weight |
+|----------|-------------|--------------|
+| KL-0 | 2,286 | 0.506 |
+| KL-1 | 1,046 | 1.105 |
+| KL-2 | 1,516 | 0.762 |
+| KL-3 | 757 | 1.524 |
+| KL-4 | 173 | 6.672 |
+
+KL-4 receives a weight ~13× larger than KL-0 — matching the imbalance ratio found in Stage 1.
+
+---
+
+## 2.6 What Stage 2 Does NOT Do
+
+- ❌ No model training
+- ❌ No ResNet-50 instantiation
+- ❌ No data augmentation (spatial transforms, flips, rotations)
+- ❌ No YOLO localization
+- ❌ No Grad-CAM
+
+---
+
+## 2.7 Recommended Next Step — Stage 3
+
+Stage 3 will implement:
+1. **Single-stream baseline ResNet-50** with standard Cross-Entropy loss
+2. Training loop with early stopping (patience=10)
+3. Evaluation: Quadratic Weighted Kappa (QWK), macro-F1, confusion matrix
+4. Save best checkpoint to `outputs/models/`
+5. Plot training curves to `reports/stage3/`
+
+> **Confirm Stage 3 to proceed.**
+
+---
+*Report generated by Stage 2 pipeline*
