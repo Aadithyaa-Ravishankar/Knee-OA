@@ -1,0 +1,38 @@
+{
+  "stage": "4a",
+  "model": "BaselineResNet50 + CORN",
+  "backbone": "ImageNet ResNet-50 (unchanged family)",
+  "best_epoch": 15,
+  "training_time_minutes": 60.7,
+  "best_val_qwk": 0.8141,
+  "test_metrics": {
+    "test_qwk": 0.8321,
+    "test_macro_f1": 0.6923,
+    "test_accuracy": 0.6522,
+    "test_acc_kl0": 0.6933,
+    "test_acc_kl1": 0.5777,
+    "test_acc_kl2": 0.5481,
+    "test_acc_kl3": 0.8161,
+    "test_acc_kl4": 0.7647,
+    "test_loss": 0.218
+  },
+  "checkpoint": "D:\\NN & DL\\Knee-OA\\outputs\\models\\resnet50_ordinal_corn_best.pth",
+  "compare_to_stage3_combined_aug_test_qwk": 0.8155,
+  "hparams": {
+    "lr": 5e-05,
+    "batch_size": 32,
+    "dropout": 0.5,
+    "weight_decay": 0.0005,
+    "warmup_freeze_epochs": 3,
+    "mean": [
+      0.578707,
+      0.578707,
+      0.578707
+    ],
+    "std": [
+      0.145419,
+      0.145419,
+      0.145419
+    ]
+  }
+}

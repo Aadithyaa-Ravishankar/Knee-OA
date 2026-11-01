@@ -1,0 +1,10 @@
+{
+  "status": "champion",
+  "stage": "6",
+  "reason": "Best test QWK (dual-stream cascade)",
+  "test_qwk": 0.8417,
+  "best_val_qwk": 0.8011,
+  "checkpoint": "outputs/models/CHAMPION_stage6_cascade.pth",
+  "source_checkpoint": "outputs/models/resnet50_dual_cascade_best.pth",
+  "previous_champion_qwk": 0.8359
+}

@@ -24,9 +24,9 @@ from PIL import Image
 from tqdm import tqdm
 
 # ── Path setup ────────────────────────────────────────────────────────────────
-PROJECT_ROOT = Path(__file__).resolve().parents[2]   # knee_oa_xai/
-DATASET_DIR  = Path("/Users/aadithyaaravishankar/Desktop/KNEE OA/dataset")
-REPORTS_DIR  = PROJECT_ROOT / "reports" / "stage2"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]   # Knee-OA/
+DATASET_DIR  = PROJECT_ROOT / "Dataset_combined"
+REPORTS_DIR  = PROJECT_ROOT / "reports" / "stage2b"
 REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
 IMG_EXTS   = {".png", ".jpg", ".jpeg"}
@@ -105,11 +105,11 @@ def main():
         "mean_3ch":        [round(mean, 6)] * 3,
         "std_3ch":         [round(std, 6)] * 3,
     }
-    out = REPORTS_DIR / "normalization_stats.json"
-    out.write_text(json.dumps(stats, indent=2))
+    out = REPORTS_DIR / "normalization_stats_combined.json"
+    out.write_text(json.dumps(stats, indent=2), encoding="utf-8")
     print(f"\n  Saved → {out}")
     print("=" * 60)
-    print("✅ Stage 2a complete — normalization stats computed.")
+    print("✅ Combined-train normalization stats computed.")
 
 
 if __name__ == "__main__":

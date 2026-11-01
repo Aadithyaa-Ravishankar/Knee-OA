@@ -48,7 +48,7 @@ from src.evaluation.metrics       import (
 )
 
 # ── Paths ────────────────────────────────────────────────────────────────────
-DATASET_DIR  = Path("/Users/aadithyaaravishankar/Desktop/KNEE OA/dataset")
+DATASET_DIR  = PROJECT_ROOT / "Dataset_combined"
 MODELS_DIR   = PROJECT_ROOT / "outputs" / "models"
 REPORTS_DIR  = PROJECT_ROOT / "reports"  / "stage3"
 FIGURES_DIR  = REPORTS_DIR / "figures"
@@ -69,8 +69,8 @@ PATIENCE      = 10          # early stopping on val QWK
 MEAN          = [0.578707, 0.578707, 0.578707]
 STD           = [0.127051, 0.127051, 0.127051]
 
-CHECKPOINT    = MODELS_DIR / "baseline_resnet50_best.pth"
-HISTORY_JSON  = REPORTS_DIR / "training_history.json"
+CHECKPOINT    = MODELS_DIR / "baseline_resnet50_combined_aug_best.pth"
+HISTORY_JSON  = REPORTS_DIR / "training_history_combined_aug.json"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -241,7 +241,12 @@ def plot_confusion_matrix(y_true, y_pred, out_dir: Path, split: str = "test") ->
 
 def main():
     set_seed(SEED)
-    device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+    elif getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
+        device = torch.device("mps")
+    else:
+        device = torch.device("cpu")
     print(f"\n{'='*60}")
     print(f"  STAGE 3 — BASELINE ResNet-50 TRAINING")
     print(f"{'='*60}")

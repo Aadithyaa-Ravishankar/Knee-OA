@@ -45,6 +45,8 @@ def build_dataloaders(
     use_weighted_sampler: bool = True,
     splits: tuple = ("train", "val", "test"),
     pin_memory: bool = True,
+    gp_sample_scale: float = 1.0,
+    class_sample_scale: Optional[dict] = None,
 ) -> Dict[str, DataLoader]:
     """
     Build train / val / test DataLoaders.
@@ -59,6 +61,8 @@ def build_dataloaders(
     use_weighted_sampler  : if True, apply WeightedRandomSampler on the train split
     splits                : which splits to build loaders for
     pin_memory            : pin CPU memory for faster GPU transfer
+    gp_sample_scale       : down-weight G&P train samples in the sampler (P4), e.g. 0.5
+    class_sample_scale    : optional per-KL multipliers (e.g. undersample KL-0)
 
     Returns
     -------
@@ -87,7 +91,10 @@ def build_dataloaders(
 
         if is_train and use_weighted_sampler:
             sampler = WeightedRandomSampler(
-                weights     = dataset.sample_weights(),
+                weights     = dataset.sample_weights(
+                    gp_scale=gp_sample_scale,
+                    class_scale=class_sample_scale,
+                ),
                 num_samples = len(dataset),
                 replacement = True,
             )

@@ -118,16 +118,29 @@ class KneeOADataset(Dataset):
         )
         return weights
 
-    def sample_weights(self) -> torch.Tensor:
+    def sample_weights(
+        self,
+        gp_scale: float = 1.0,
+        class_scale: dict[int, float] | None = None,
+    ) -> torch.Tensor:
         """
         Per-sample weights for WeightedRandomSampler.
         Shape: (len(dataset),)
+
+        gp_scale    : down-weight G&P files (name starts with 'gp_'), e.g. 0.5
+        class_scale : extra multipliers per KL grade after inverse-frequency.
+                      Example cascade balance (undersample KL-0, protect KL-1):
+                        {0: 0.45, 1: 1.35, 2: 0.75, 3: 1.0, 4: 1.15}
         """
         cls_w = self.class_weights()
-        return torch.tensor(
-            [cls_w[label].item() for _, label in self.samples],
-            dtype=torch.float32,
-        )
+        scales = class_scale or {}
+        weights = []
+        for fpath, label in self.samples:
+            w = cls_w[label].item() * float(scales.get(label, 1.0))
+            if gp_scale != 1.0 and fpath.name.lower().startswith("gp_"):
+                w *= gp_scale
+            weights.append(w)
+        return torch.tensor(weights, dtype=torch.float32)
 
     def __repr__(self) -> str:
         counts = self.class_counts()

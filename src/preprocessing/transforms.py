@@ -85,13 +85,13 @@ class GrayscaleToRGB:
 # Update these values after running compute_stats.py on the training split.
 # ──────────────────────────────────────────────────────────────────────────────
 
-# Grayscale (1-channel) — computed from train split via compute_stats.py
+# Grayscale (1-channel) — from Dataset_combined train (compute_stats.py)
 TRAIN_MEAN_1CH = [0.578707]
-TRAIN_STD_1CH  = [0.127051]
+TRAIN_STD_1CH  = [0.145419]
 
 # 3-channel repeat (same value on all channels)
 TRAIN_MEAN_3CH = [0.578707, 0.578707, 0.578707]
-TRAIN_STD_3CH  = [0.127051, 0.127051, 0.127051]
+TRAIN_STD_3CH  = [0.145419, 0.145419, 0.145419]
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -106,13 +106,14 @@ def get_train_transforms_1ch(
     Training transforms — grayscale, 1-channel output.
 
     Pipeline:
-        CLAHE → ToTensor → Normalize
-    Note: No spatial augmentation at this stage (Stage 2).
-          Augmentation will be added in Stage 3 after baseline evaluation.
+        CLAHE → light spatial/intensity aug → ToTensor → Normalize
     """
     return T.Compose([
         ApplyCLAHE(clip_limit=2.0, tile_size=(8, 8)),
-        T.ToTensor(),                       # PIL [0,255] → float [0,1], shape (1,H,W)
+        T.RandomHorizontalFlip(p=0.5),
+        T.RandomAffine(degrees=12, translate=(0.05, 0.05), scale=(0.9, 1.1), fill=0),
+        T.ColorJitter(brightness=0.2, contrast=0.2),
+        T.ToTensor(),
         T.Normalize(mean=mean, std=std),
     ])
 
@@ -137,12 +138,20 @@ def get_train_transforms_3ch(
 ) -> T.Compose:
     """
     Training transforms — 3-channel output (for ImageNet-pretrained ResNet-50).
+
+    On-the-fly aug (train only): flip, small rotation, brightness/contrast.
+    Eval transforms stay unaugmented.
     """
     return T.Compose([
         ApplyCLAHE(clip_limit=2.0, tile_size=(8, 8)),
+        T.RandomHorizontalFlip(p=0.5),
+        T.RandomAffine(degrees=12, translate=(0.05, 0.05), scale=(0.9, 1.1), fill=0),
+        T.ColorJitter(brightness=0.2, contrast=0.2),
         T.ToTensor(),
         GrayscaleToRGB(),
         T.Normalize(mean=mean, std=std),
+        # Mild occlusion regularizer (after normalize; fill with 0 == mean)
+        T.RandomErasing(p=0.25, scale=(0.02, 0.12), ratio=(0.3, 3.3), value=0.0),
     ])
 
 

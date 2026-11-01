@@ -16,6 +16,19 @@ ENV/
 outputs/models/*.pth
 outputs/models/*.pt
 outputs/models/*.ckpt
+# Allow the Stage-6 champion only (tracked via Git LFS)
+!outputs/models/CHAMPION_stage6_cascade.pth
+
+# ── Combined dataset (rebuild locally) ───────────────────────
+Dataset_combined/
+Dataset/
+
+# ── Failed / experimental stage reports (optional local only) ─
+reports/stage4b/
+reports/stage7/
+reports/stage8/
+reports/stage9a/
+reports/stage9b/
 
 # ── Python cache ──────────────────────────────────────────────
 __pycache__/
