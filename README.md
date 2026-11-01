@@ -168,3 +168,16 @@ Dataset: [Knee Osteoarthritis Dataset with Severity Grading](https://www.kaggle.
 ## License
 
 For academic and research use only.
+
+---
+
+## Champion model (Stage 6)
+
+Best checkpoint: `outputs/models/CHAMPION_stage6_cascade.pth` (Git LFS)
+
+| Card | Test QWK | Notes |
+|------|----------|-------|
+| Champion (raw) | **0.8417** | Dual-stream cascade, all test cases |
+| Clinical deploy | **0.8777** covered | Stage 10: temp + severe-protect + abstain @ 81.8% coverage |
+
+See `RELEASE_MANIFEST.md` for the curated file list and how to run Stage 10 clinical deploy.

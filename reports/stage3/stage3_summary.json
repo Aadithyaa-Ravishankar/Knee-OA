@@ -1,0 +1,36 @@
+{
+  "stage": 3,
+  "model": "BaselineResNet50",
+  "best_epoch": 7,
+  "training_time_minutes": 39.98,
+  "best_val_qwk": 0.776,
+  "test_metrics": {
+    "test_qwk": 0.8155,
+    "test_macro_f1": 0.6558,
+    "test_accuracy": 0.6473,
+    "test_acc_kl0": 0.8372,
+    "test_acc_kl1": 0.5068,
+    "test_acc_kl2": 0.3669,
+    "test_acc_kl3": 0.8161,
+    "test_acc_kl4": 0.8039,
+    "test_loss": 0.8536
+  },
+  "checkpoint": "D:\\NN & DL\\Knee-OA\\outputs\\models\\baseline_resnet50_combined_aug_best.pth",
+  "hparams": {
+    "lr": 0.0001,
+    "batch_size": 32,
+    "dropout": 0.3,
+    "weight_decay": 0.0001,
+    "patience": 10,
+    "mean": [
+      0.578707,
+      0.578707,
+      0.578707
+    ],
+    "std": [
+      0.127051,
+      0.127051,
+      0.127051
+    ]
+  }
+}

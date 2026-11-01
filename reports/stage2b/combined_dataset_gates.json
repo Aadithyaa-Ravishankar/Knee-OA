@@ -1,0 +1,95 @@
+{
+  "option": "Aplus_chen_train_plus_gp_kl2_kl3_kl4",
+  "output": "D:\\NN & DL\\Knee-OA\\Dataset_combined",
+  "train_counts": {
+    "0": 2286,
+    "1": 1046,
+    "2": 1748,
+    "3": 978,
+    "4": 379
+  },
+  "train_total": 6437,
+  "gp_added": {
+    "2": 232,
+    "3": 221,
+    "4": 206
+  },
+  "gates": [
+    {
+      "gate": "chen_exists",
+      "pass": true,
+      "detail": "D:\\NN & DL\\Knee-OA\\Dataset"
+    },
+    {
+      "gate": "gp_expert_i_exists",
+      "pass": true,
+      "detail": "D:\\NN & DL\\Digital Knee X-ray Images\\Knee X-ray Images\\MedicalExpert-I\\MedicalExpert-I"
+    },
+    {
+      "gate": "combined_exists",
+      "pass": true,
+      "detail": "D:\\NN & DL\\Knee-OA\\Dataset_combined"
+    },
+    {
+      "gate": "train_counts",
+      "pass": true,
+      "detail": "got={0: 2286, 1: 1046, 2: 1748, 3: 978, 4: 379} expected={0: 2286, 1: 1046, 2: 1748, 3: 978, 4: 379}"
+    },
+    {
+      "gate": "train_total",
+      "pass": true,
+      "detail": "got=6437 expected=6437"
+    },
+    {
+      "gate": "val_unchanged",
+      "pass": true,
+      "detail": "got={0: 328, 1: 153, 2: 212, 3: 106, 4: 27}"
+    },
+    {
+      "gate": "test_unchanged",
+      "pass": true,
+      "detail": "got={0: 639, 1: 296, 2: 447, 3: 223, 4: 51}"
+    },
+    {
+      "gate": "no_gp_in_val",
+      "pass": true,
+      "detail": "found=0"
+    },
+    {
+      "gate": "no_gp_in_test",
+      "pass": true,
+      "detail": "found=0"
+    },
+    {
+      "gate": "gp_kl2_added",
+      "pass": true,
+      "detail": "got=232 expected=232"
+    },
+    {
+      "gate": "gp_kl3_added",
+      "pass": true,
+      "detail": "got=221 expected=221"
+    },
+    {
+      "gate": "gp_kl4_added",
+      "pass": true,
+      "detail": "got=206 expected=206"
+    },
+    {
+      "gate": "image_size_224",
+      "pass": true,
+      "detail": "bad=[]"
+    },
+    {
+      "gate": "imbalance_improved",
+      "pass": true,
+      "detail": "KL0/KL4 ratio=6.03 (was ~13.2)"
+    },
+    {
+      "gate": "dataloader_smoke",
+      "pass": true,
+      "detail": "batch_shape=(8, 3, 224, 224) labels=[3, 0, 3, 2, 4, 3, 4, 4]"
+    }
+  ],
+  "all_gates_passed": true
+}

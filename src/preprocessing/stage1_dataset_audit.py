@@ -39,9 +39,10 @@ warnings.filterwarnings("ignore")
 # CONFIGURATION
 # ──────────────────────────────────────────────────────────────────────────────
 BASE_DIR     = Path(__file__).resolve().parent
-DATASET_DIR  = Path("/Users/aadithyaaravishankar/Desktop/KNEE OA/dataset")
-FIGURES_DIR  = BASE_DIR / "outputs" / "figures"
-METRICS_DIR  = BASE_DIR / "outputs" / "metrics"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]   # Knee-OA/
+DATASET_DIR  = PROJECT_ROOT / "Dataset"
+FIGURES_DIR  = PROJECT_ROOT / "outputs" / "figures"
+METRICS_DIR  = PROJECT_ROOT / "outputs" / "metrics"
 
 FIGURES_DIR.mkdir(parents=True, exist_ok=True)
 METRICS_DIR.mkdir(parents=True, exist_ok=True)
@@ -530,7 +531,7 @@ def main():
     print("\n[7/7] Writing audit report...")
     report_md = build_report(df, leakage, duplicates_df)
     report_path = METRICS_DIR / "audit_report.md"
-    report_path.write_text(report_md)
+    report_path.write_text(report_md, encoding="utf-8")
     print(f"  Saved → {report_path}")
 
     # Print a condensed console summary

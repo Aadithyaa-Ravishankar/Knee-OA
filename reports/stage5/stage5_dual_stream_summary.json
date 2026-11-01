@@ -1,0 +1,54 @@
+{
+  "stage": "5",
+  "model": "DualStreamResNet50 + CORN",
+  "implements": [
+    "P0-champion-ref",
+    "P1-dual-stream",
+    "P4-gp-reweight",
+    "abstain",
+    "4a-exact-hparams-no-mixup"
+  ],
+  "best_epoch": 9,
+  "training_time_minutes": 65.98,
+  "best_val_qwk": 0.8164,
+  "test_metrics": {
+    "test_qwk": 0.8359,
+    "test_macro_f1": 0.6794,
+    "test_accuracy": 0.6643,
+    "test_acc_kl0": 0.8279,
+    "test_acc_kl1": 0.4527,
+    "test_acc_kl2": 0.4899,
+    "test_acc_kl3": 0.7668,
+    "test_acc_kl4": 0.9216,
+    "test_loss": 0.2195,
+    "test_coverage": 0.6612,
+    "test_qwk_covered": 0.9085,
+    "test_acc_covered": 0.7808,
+    "test_n_abstain": 561.0,
+    "test_n_covered": 1095.0
+  },
+  "champion_test_qwk": 0.8321,
+  "delta_vs_champion": 0.0038,
+  "checkpoint": "D:\\NN & DL\\Knee-OA\\outputs\\models\\resnet50_dual_stream_corn_best.pth",
+  "hparams": {
+    "local_frac": 0.72,
+    "mixup": false,
+    "gp_sample_scale": 0.5,
+    "lr": 5e-05,
+    "dropout": 0.5,
+    "weight_decay": 0.0005,
+    "warmup_freeze_epochs": 3,
+    "patience": 7,
+    "mean": [
+      0.578707,
+      0.578707,
+      0.578707
+    ],
+    "std": [
+      0.145419,
+      0.145419,
+      0.145419
+    ],
+    "aligned_to": "stage4a"
+  }
+}

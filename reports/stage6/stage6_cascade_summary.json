@@ -1,0 +1,55 @@
+{
+  "stage": "6",
+  "model": "DualStreamCascade",
+  "technique": "0-vs-OA then OA-CORN",
+  "dual_stream": true,
+  "best_epoch": 4,
+  "training_time_minutes": 65.48,
+  "best_val_qwk": 0.8011,
+  "test_metrics": {
+    "test_qwk": 0.8417,
+    "test_macro_f1": 0.675,
+    "test_accuracy": 0.6425,
+    "test_acc_kl0": 0.7136,
+    "test_acc_kl1": 0.5541,
+    "test_acc_kl2": 0.4653,
+    "test_acc_kl3": 0.861,
+    "test_acc_kl4": 0.8627,
+    "test_loss": 0.5464,
+    "test_coverage": 0.8653,
+    "test_qwk_covered": 0.8568,
+    "test_acc_covered": 0.6615,
+    "test_n_abstain": 223.0,
+    "test_n_covered": 1433.0
+  },
+  "champion_test_qwk": 0.8359,
+  "delta_vs_champion": 0.0058,
+  "checkpoint": "D:\\NN & DL\\Knee-OA\\outputs\\models\\resnet50_dual_cascade_best.pth",
+  "hparams": {
+    "lr": 5e-05,
+    "dropout": 0.5,
+    "weight_decay": 0.0005,
+    "batch_size": 16,
+    "patience": 7,
+    "warmup_freeze_epochs": 3,
+    "gp_sample_scale": 0.5,
+    "class_sample_scale": {
+      "0": 0.45,
+      "1": 1.35,
+      "2": 0.75,
+      "3": 1.0,
+      "4": 1.15
+    },
+    "local_frac": 0.72,
+    "mean": [
+      0.578707,
+      0.578707,
+      0.578707
+    ],
+    "std": [
+      0.145419,
+      0.145419,
+      0.145419
+    ]
+  }
+}

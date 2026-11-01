@@ -1,0 +1,97 @@
+{
+  "stage": "10",
+  "technique": "frozen S6 + temperature + severe-protect + abstain",
+  "checkpoint": "outputs/models/resnet50_dual_cascade_best.pth",
+  "params": {
+    "temperature": 1.4684,
+    "severe_protect_thr": 0.45,
+    "abstain_conf_thr": 0.5,
+    "min_coverage": 0.7,
+    "oa_threshold": 0.5
+  },
+  "cards": {
+    "champion": {
+      "description": "Raw Stage 6 predictions on all test cases (weights frozen)",
+      "metrics": {
+        "test_qwk": 0.8417,
+        "test_macro_f1": 0.675,
+        "test_accuracy": 0.6425,
+        "test_acc_kl0": 0.7136,
+        "test_acc_kl1": 0.5541,
+        "test_acc_kl2": 0.4653,
+        "test_acc_kl3": 0.861,
+        "test_acc_kl4": 0.8627
+      }
+    },
+    "clinical": {
+      "description": "Calibrated probs + severe-protect + abstain on early low-confidence; use covered_* when the system answers",
+      "val_selection": {
+        "val_qwk": 0.8013,
+        "val_macro_f1": 0.6692,
+        "val_accuracy": 0.6126,
+        "val_acc_kl0": 0.6494,
+        "val_acc_kl1": 0.5359,
+        "val_acc_kl2": 0.4434,
+        "val_acc_kl3": 0.8585,
+        "val_acc_kl4": 0.963,
+        "val_coverage": 0.7893,
+        "val_qwk_covered": 0.8516,
+        "val_acc_covered": 0.6794,
+        "val_n_abstain": 174.0,
+        "val_n_covered": 652.0,
+        "val_covered_acc_kl0": 0.8008,
+        "val_covered_acc_kl1": 0.4722,
+        "val_covered_acc_kl2": 0.4106,
+        "val_covered_acc_kl3": 0.91,
+        "val_covered_acc_kl4": 0.963,
+        "val_severe_protect_thr": 0.45,
+        "val_abstain_conf_thr": 0.5,
+        "val_temperature": 1.4684
+      },
+      "test_full_after_severe_protect": {
+        "test_qwk": 0.8419,
+        "test_macro_f1": 0.6742,
+        "test_accuracy": 0.6419,
+        "test_acc_kl0": 0.7136,
+        "test_acc_kl1": 0.5541,
+        "test_acc_kl2": 0.4586,
+        "test_acc_kl3": 0.87,
+        "test_acc_kl4": 0.8627
+      },
+      "test_with_abstain": {
+        "test_qwk": 0.8419,
+        "test_macro_f1": 0.6742,
+        "test_accuracy": 0.6419,
+        "test_acc_kl0": 0.7136,
+        "test_acc_kl1": 0.5541,
+        "test_acc_kl2": 0.4586,
+        "test_acc_kl3": 0.87,
+        "test_acc_kl4": 0.8627,
+        "test_coverage": 0.8182,
+        "test_qwk_covered": 0.8777,
+        "test_acc_covered": 0.69,
+        "test_n_abstain": 301.0,
+        "test_n_covered": 1355.0,
+        "test_covered_acc_kl0": 0.8367,
+        "test_covered_acc_kl1": 0.4789,
+        "test_covered_acc_kl2": 0.4212,
+        "test_covered_acc_kl3": 0.8981,
+        "test_covered_acc_kl4": 0.8627,
+        "test_severe_protect_thr": 0.45,
+        "test_abstain_conf_thr": 0.5,
+        "test_temperature": 1.4684
+      }
+    }
+  },
+  "gate": {
+    "floor_qwk": 0.8417,
+    "floor_kl1": 0.55,
+    "floor_kl2": 0.465,
+    "floor_kl3": 0.84,
+    "floor_kl4": 0.84,
+    "evaluated_on": "full test with severe-protect, no abstain",
+    "passed": false
+  },
+  "promoted": false,
+  "champion_json_untouched": true
+}

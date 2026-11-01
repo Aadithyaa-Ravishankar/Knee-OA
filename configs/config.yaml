@@ -6,8 +6,8 @@
 
 # ── Paths ────────────────────────────────────────────────────────────────────
 paths:
-  dataset_root : "/Users/aadithyaaravishankar/Desktop/KNEE OA/dataset"
-  project_root : "/Users/aadithyaaravishankar/Desktop/KNEE OA/knee_oa_xai"
+  dataset_root : "D:/NN & DL/Knee-OA/Dataset_combined"
+  project_root : "D:/NN & DL/Knee-OA"
   outputs      : "outputs/"
   reports      : "reports/"
   models       : "outputs/models/"
@@ -21,10 +21,18 @@ dataset:
   img_ext      : ".png"
   color_mode   : "grayscale"   # images are single-channel
 
-# ── Preprocessing (Stage 2) ──────────────────────────────────────────────────
+# ── Preprocessing (Stage 2 / 2b) ─────────────────────────────────────────────
 preprocessing:
   clahe_clip_limit : 2.0
   clahe_tile_size  : [8, 8]
+  # Train-only on-the-fly augmentation (see transforms.py)
+  augment          : true
+  aug_hflip_p      : 0.5
+  aug_rotation_deg : 8
+  aug_jitter       : 0.15
+  # Dataset_combined = Chen train + G&P Expert-I KL-2/3/4
+  combined_option  : "Aplus"
+  ordinal_loss     : "CORN"
   # Normalization stats — computed from train split by compute_stats.py
   mean_1ch         : [0.578707]
   std_1ch          : [0.127051]
