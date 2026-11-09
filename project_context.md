@@ -430,12 +430,17 @@ A perfectly calibrated model should have ECE close to 0.
 |-------|-------------|--------|
 | **Stage 1** | Dataset audit and validation | ✅ Complete |
 | **Stage 2** | Preprocessing pipeline (CLAHE, normalization, DataLoader) | ✅ Complete |
-| **Stage 3** | Baseline ResNet-50 single-stream, standard CE loss | 🔄 In Progress |
-| **Stage 4** | Dual-stream architecture + ordinal regression loss | ⬜ Planned |
-| **Stage 5** | Grad-CAM integration + anatomy-alignment loss | ⬜ Planned |
-| **Stage 6** | Explanation consistency evaluation (AFS, ESS) | ⬜ Planned |
-| **Stage 7** | MC Dropout uncertainty + ECE calibration | ⬜ Planned |
-| **Stage 8** | Ablation studies + final comparison table | ⬜ Planned |
+| **Stage 3** | Early dual-cascade / baseline era | ✅ Complete |
+| **Stage 4** | Patient-grouped 5-fold CV + OOF | ✅ Complete |
+| **Stage 5** | OARSI aux (JSN/ost) multi-task | ✅ Complete |
+| **Stage 6** | Joint-focus champion (`attn_spatial`) | ✅ Complete |
+| **Stage 7** | Expected-grade cutpoints + locked test (QWK 0.867) | ✅ Complete |
+| **Stage 8** | Grad-CAM explainability | ✅ Complete |
+| **Stage 9** | Explanation consistency (AFS / ESS / grade flip) | ✅ Complete |
+| **Stage 10** | Uncertainty & calibration (MC Dropout / ECE) | ✅ Complete |
+| **Stage 11** | Ablation reporting (artifact-based) | ✅ Complete |
+
+> Canonical map: `docs/PIPELINE_STAGES.md`. Experimental “Stage 19” label retired.
 
 ### 8.2 Preprocessing Pipeline (Stage 2 — Implemented)
 
@@ -454,34 +459,22 @@ A perfectly calibrated model should have ECE close to 0.
 - Random rotation (±5°)
 - **No** vertical flip, heavy distortion, or synthetic lesion generation
 
-### 8.3 Baseline Model (Stage 3 — In Progress)
+### 8.3 Baseline / early dual-cascade (Stage 3 — Complete)
 
-- **Backbone**: ResNet-50 pretrained on ImageNet
-- **Modification**: Replace the final `fc(2048 → 1000)` layer with `fc(2048 → 5)`
-- **Total parameters**: ~23.5 million (all trainable)
-- **Loss**: Weighted Cross-Entropy (class weights inversely proportional to class frequency)
-- **Optimizer**: AdamW, lr=1e-4, weight_decay=1e-4
-- **Scheduler**: ReduceLROnPlateau (factor=0.5, patience=5)
-- **Early stopping**: patience=10 epochs
-- **Batch size**: 32
-- **Dropout**: 0.3 before final FC layer
+Early era covered single-stream ResNet-50 baselines and the first dual-cascade ordinal nets (`src/models/dual_stream*.py`, `src/training/stage3_phase01_champion.py`). That work established the lower bound and the cascade recipe later used in CV.
 
-This baseline serves as the **lower bound** for comparison. Every subsequent addition (ordinal loss, dual stream, anatomy loss) should improve on it.
+### 8.4 Champion architecture (Stages 4–6 — Complete)
 
-### 8.4 Dual-Stream Architecture (Stage 4 — Planned)
+Final training uses **Dual OrdinalNet** (`src/models/ordinal_net.py`) with soft attention / spatial aux, patient-grouped 5-fold CV, and OARSI aux multi-task heads.
 
 ```
-Global branch:  Input(3,224,224) → ResNet50 (layer1-4) → AdaptiveAvgPool → 2048-d vector
-Local branch:   Input(3,224,224) → Attention crop → ResNet50 (layer1-4) → AdaptiveAvgPool → 2048-d vector
-Fusion:         Concat(4096-d) → Linear(4096→512) → ReLU → Dropout(0.3) → Linear(512→4)
-Output:         4 binary classifiers for CORN ordinal loss
+Global / local dual streams → ordinal heads (CORN-style)
++ soft attn / spatial aux (joint focus)
++ OARSI aux (JSN / osteophyte) under Stage 5
+Weights: outputs/cv/runs/r50_dual_cascade_sqrt_aux_attn_spatial/
 ```
 
-**Attention crop mechanism:**
-- Gradient-free spatial attention map computed from the global stream's intermediate features
-- Identifies the joint-space region (roughly center of the 224×224 image after anatomical alignment)
-- Crop and resize to 112×112 → fed to local branch
-
+Decode (Stage 7) applies **OOF-fit expected-grade cutpoints** on the locked test set (**QWK 0.8673**). Grad-CAM proof lives under Stage 8 / `reports/pipeline/gradcam_*`.
 ### 8.5 Evaluation Metrics
 
 | Metric | Why Used |
@@ -533,7 +526,7 @@ Output:         4 binary classifiers for CORN ordinal loss
 - **Handling strategy**:
   1. `WeightedRandomSampler` on training DataLoader (batch composition)
   2. Inverse-frequency class weights in loss function (gradient scale)
-  3. Ordinal loss (Stage 4) naturally handles class boundaries differently
+  3. Ordinal loss (Stages 3–4+) naturally handles class boundaries differently
 
 ### Patient / Subject Information
 
@@ -566,113 +559,57 @@ Output:         4 binary classifiers for CORN ordinal loss
 
 ---
 
-## 10. Implementation Stages (Completed & Planned)
+## 10. Implementation Stages (Canonical — see `docs/PIPELINE_STAGES.md`)
+
+> Experimental “Stage 19” labels are **retired**. Use Stages **1–8** everywhere (docs, code, paths).
 
 ### Stage 1 — Dataset Audit ✅
-
-**Goal:** Fully understand the dataset before writing any model code.
-
-**Scripts:** `src/preprocessing/stage1_dataset_audit.py`
-
-**Outputs:** `reports/stage1/audit_report.md`, distribution charts, sample X-rays
-
-**Key findings:**
-- 9,786 clean PNG images, 224×224, all grayscale
-- 0 corrupted, 0 duplicates
-- 4 pre-defined splits with patient-level separation (no leakage)
-- 13.07× class imbalance (KL-0 vs KL-4)
-- Both knees (L/R) from same patient always in same split
-
----
+**Scripts:** `src/preprocessing/stage1_dataset_audit.py`  
+**Outputs:** `reports/stage1/`  
+Key findings: 9,786 clean 224×224 PNGs; patient-level splits; 13.07× KL-0 vs KL-4 imbalance.
 
 ### Stage 2 — Preprocessing Foundation ✅
+**Scripts:** `src/preprocessing/` (`dataset.py`, `transforms.py`, `dataloader.py`, `compute_stats.py`, …)  
+CLAHE + ImageNet-style 3-ch normalize; WeightedRandomSampler; fold feature builders for OARSI aux.
 
-**Goal:** Build a reusable, configurable preprocessing pipeline.
+### Stage 3 — Early dual-cascade / baseline era ✅
+**Scripts / models:** `src/training/stage3_phase01_champion.py`, `src/models/baseline.py`, `dual_stream*.py`  
+Established ordinal dual-cascade recipes later reused in CV.
 
-**Scripts:** `src/preprocessing/`
-- `dataset.py` — PyTorch Dataset, class weight calculator
-- `transforms.py` — CLAHE + Normalize (lazy-init for multiprocessing safety)
-- `dataloader.py` — `build_dataloaders()` with WeightedRandomSampler
-- `compute_stats.py` — Pixel-level mean/std via Welford's algorithm
+### Stage 4 — Patient-grouped 5-fold CV + OOF ✅
+**Scripts:** `stage4_make_folds.py`, `stage4_cv_train.py`, `stage4_run_folds.py`, `stage4_oof_report.py`  
+**Artifacts:** `reports/pipeline/folds.csv`, OOF under `outputs/cv/runs/<run>/fold*/`
 
-**Key design decisions:**
-- CLAHE lazy-initialization (`_get_clahe()`) to avoid `cv2.CLAHE` pickling failures on Python 3.14 / macOS with `forkserver`
-- `num_workers=0` recommended on Python 3.14 macOS (spawn/forkserver incompatibility with custom objects)
-- 3-channel repeat for ImageNet-pretrained ResNet-50
+### Stage 5 — OARSI aux multi-task ✅
+**Scripts:** `stage5_dump_aux.py`, `src/preprocessing/make_fold_features.py`, `src/eval/aux_feature_eval.py`  
+Aux CSV: `reports/pipeline/folds_features.csv`; spatial / soft-attn aux flags on OrdinalNet.
 
----
+### Stage 6 — Joint-focus champion weights ✅
+**Run:** `r50_dual_cascade_sqrt_aux_attn_spatial` under `outputs/cv/runs/`  
+**Screen:** `stage6_screen_joint_focus.py` → `reports/pipeline/screen_*.json`
 
-### Stage 3 — Baseline ResNet-50 🔄
+### Stage 7 — Decode calibration + locked test ✅
+**Scripts:** `stage7_decode_calibrate.py`, `stage7_final_test.py`  
+**Final decode:** OOF-fit expected-grade cutpoints → **locked-test QWK 0.8673**  
+**Report:** `reports/pipeline/final_test_r50_dual_cascade_sqrt_aux_attn_spatial_expected_cutpoints.json`
 
-**Goal:** Establish a reproducible baseline before adding any novel components.
+### Stage 8 — Explainability (Grad-CAM) ✅
+**Scripts:** `stage8_gradcam.py`, `stage8_gradcam_check.py`  
+**Proof:** `reports/pipeline/gradcam_correct_attn_spatial_cutpoints/` (+ error/neighbor CAM dumps)
 
-**Scripts:** `src/training/stage3_train_baseline.py`, `src/models/baseline.py`
+### Stage 9 — Explanation consistency ✅
+**Scripts:** `stage9_explanation_consistency.py`, `src/evaluation/consistency.py`  
+**Metrics:** population AFS (`band_mass`), ESS (SSIM under brightness ±5% / noise σ=0.01), grade flip rate  
+**Report:** `reports/pipeline/explanation_consistency_r50_dual_cascade_sqrt_aux_attn_spatial/`
 
-**Architecture:** ResNet-50, final FC replaced with 5-class head
+### Stage 10 — Uncertainty & calibration ✅
+**Scripts:** `stage10_uncertainty.py`, `src/evaluation/uncertainty.py`  
+**Metrics:** 30-pass MC Dropout entropy, ECE, reliability diagrams  
+**Report:** `reports/pipeline/uncertainty_r50_dual_cascade_sqrt_aux_attn_spatial/`
 
-**Loss:** Weighted Cross-Entropy
-
-**Metrics tracked:** QWK, macro-F1, per-class accuracy, confusion matrix
-
-**Output:** `outputs/models/baseline_resnet50_best.pth`, training curves in `reports/stage3/`
-
----
-
-### Stage 4 — Dual-Stream + Ordinal Loss ⬜
-
-**Goal:** Replace baseline with anatomy-aware dual-stream architecture and ordinal loss.
-
-**Files to create:**
-- `src/models/dual_stream.py` — DualStreamResNet50
-- `src/losses/ordinal_loss.py` — CORN ordinal CE loss
-- `src/losses/anatomy_loss.py` — Grad-CAM anatomy alignment loss
-- `src/training/stage4_train_dual_stream.py`
-
----
-
-### Stage 5 — Grad-CAM Explainability ⬜
-
-**Goal:** Integrate Grad-CAM into both training (anatomy loss) and inference (visual explanation).
-
-**Files to create:**
-- `src/xai/gradcam.py` — Grad-CAM, Grad-CAM++, Score-CAM
-- `src/xai/visualization.py` — Overlay heatmap on X-ray, save to `outputs/heatmaps/`
-
----
-
-### Stage 6 — Explanation Consistency Evaluation ⬜
-
-**Goal:** Quantitatively validate that heatmaps are anatomically meaningful and stable.
-
-**Files to create:**
-- `src/xai/consistency.py` — AFS computation, ESS computation (SSIM), perturbation pipeline
-- `src/evaluation/xai_metrics.py` — Population-level AFS/ESS statistics
-
----
-
-### Stage 7 — Uncertainty Quantification ⬜
-
-**Goal:** Add MC Dropout inference, entropy-based uncertainty, ECE calibration.
-
-**Files to create:**
-- `src/uncertainty/mc_dropout.py` — N-pass inference, entropy, grade flip rate
-- `src/uncertainty/calibration.py` — ECE computation, reliability diagram
-
----
-
-### Stage 8 — Ablation Studies ⬜
-
-**Goal:** Prove that each component contributes. Ablations to run:
-
-| Configuration | Ordinal Loss | Dual Stream | Anatomy Loss | XAI Validation |
-|---------------|:---:|:---:|:---:|:---:|
-| Stage 3 Baseline | ❌ | ❌ | ❌ | ❌ |
-| + Ordinal Loss only | ✅ | ❌ | ❌ | ❌ |
-| + Dual Stream only | ❌ | ✅ | ❌ | ❌ |
-| + Dual Stream + Ordinal | ✅ | ✅ | ❌ | ❌ |
-| + All (Full Model) | ✅ | ✅ | ✅ | ✅ |
-
-For each configuration, report: QWK, macro-F1, AFS, ESS, ECE. This table will form the primary results table of the paper.
+### Stage 11 — Ablation reporting ✅
+**Scripts:** `stage11_ablation_report.py`  
+**Report:** `reports/pipeline/ablation_stage11/` (from existing finals/screen/Stage 9–10; no champion overwrite)
 
 ---
 
@@ -814,58 +751,45 @@ If deployed in a clinical support setting:
 ## Appendix A — Project File Map
 
 ```
-knee_oa_xai/
+Knee-OA/
 │
 ├── project_context.md          ← THIS FILE
-├── README.md                   ← Quick start guide
-├── DATASET_SETUP.md            ← Teammate dataset download guide
+├── README.md
+├── RELEASE_MANIFEST.md
+├── docs/PIPELINE_STAGES.md     ← Canonical Stage 1–8 map
 ├── requirements.txt
-│
-├── configs/
-│   └── config.yaml             ← Central config (paths, hyperparams)
+├── kaggle/                     ← Notebook + make_bundle.py
 │
 ├── src/
-│   ├── preprocessing/          ← Stage 1–2
+│   ├── preprocessing/          ← Stages 1–2 (+ fold/OARSI feature builders)
 │   │   ├── stage1_dataset_audit.py
-│   │   ├── dataset.py
-│   │   ├── transforms.py       ← CLAHE (lazy-init), Normalize, GrayscaleToRGB
-│   │   ├── dataloader.py       ← build_dataloaders(), WeightedRandomSampler
-│   │   └── compute_stats.py   ← Welford mean/std computation
+│   │   ├── dataset.py / transforms.py / dataloader.py / compute_stats.py
+│   │   └── make_fold_features.py / build_oai_feature_labels.py
 │   │
-│   ├── models/                 ← Stage 3+
-│   │   ├── baseline.py         ← BaselineResNet50 (single-stream)
-│   │   └── dual_stream.py      ← [Planned Stage 4]
+│   ├── models/                 ← Stage 3+ (champion: ordinal_net.py)
+│   │   ├── baseline.py, dual_stream*.py
+│   │   └── ordinal_net.py
 │   │
-│   ├── losses/                 ← [Planned Stage 4]
-│   │   ├── ordinal_loss.py     ← CORN ordinal CE
-│   │   └── anatomy_loss.py     ← Grad-CAM anatomy alignment
+│   ├── losses/                 ← ordinal_loss.py, mixup.py
+│   ├── evaluation/             ← metrics, decoding, gradcam*, protocol
+│   ├── eval/                   ← aux_feature_eval.py
 │   │
-│   ├── training/               ← Stage 3+
-│   │   ├── stage3_train_baseline.py
-│   │   └── stage4_train_dual_stream.py  ← [Planned]
-│   │
-│   ├── xai/                    ← [Planned Stage 5–6]
-│   │   ├── gradcam.py
-│   │   ├── visualization.py
-│   │   └── consistency.py      ← AFS, ESS, perturbation
-│   │
-│   ├── uncertainty/            ← [Planned Stage 7]
-│   │   ├── mc_dropout.py
-│   │   └── calibration.py      ← ECE, reliability diagram
-│   │
-│   └── evaluation/             ← Stage 3+
-│       └── metrics.py          ← QWK, macro-F1, confusion matrix
+│   └── training/               ← Stages 3–8
+│       ├── stage3_phase01_champion.py
+│       ├── stage4_*.py         ← folds / CV train / OOF
+│       ├── stage5_dump_aux.py
+│       ├── stage6_screen_joint_focus.py
+│       ├── stage7_decode_calibrate.py / stage7_final_test.py
+│       └── stage8_gradcam.py / stage8_gradcam_check.py
 │
 ├── reports/
-│   ├── stage1/                 ← Dataset audit report + figures
-│   ├── stage2/                 ← Normalization stats + pipeline report
-│   └── stage3/                 ← Training curves [after Stage 3 completes]
+│   ├── stage1/ …               ← Early audit / preprocess reports
+│   └── pipeline/               ← Folds, finals, Grad-CAM, screens, error analyses
 │
 └── outputs/
-    ├── figures/                ← Dataset visualizations
-    ├── metrics/                ← Audit CSVs
-    ├── models/                 ← Saved .pth checkpoints
-    └── heatmaps/               ← Grad-CAM output images [Stage 5+]
+    ├── cv/runs/                ← 5-fold champion weights
+    ├── figures/ / metrics/ / heatmaps/
+    └── …
 ```
 
 ---

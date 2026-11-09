@@ -1,6 +1,6 @@
 # Stage 1 — Dataset Audit Report
 **Project:** Anatomy-Aware Explainable AI for Knee OA Severity Classification
-**Dataset Path:** `/Users/aadithyaaravishankar/Desktop/KNEE OA/dataset`
+**Dataset Path:** `D:\NN & DL\Knee-OA\Dataset`
 
 ---
 ## 1. Dataset Size

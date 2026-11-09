@@ -1,0 +1,85 @@
+{
+  "run": "r50_dual_cascade_sqrt_aux_attn_spatial",
+  "decode": "expected_cutpoints",
+  "n_test": 1656,
+  "n_correct": 1145,
+  "n_errors": 511,
+  "n_neighbor": 469,
+  "n_far": 42,
+  "qwk": 0.8673472056787819,
+  "pairs": [
+    {
+      "true": 1,
+      "pred": 0,
+      "n": 116,
+      "delta": 1
+    },
+    {
+      "true": 0,
+      "pred": 1,
+      "n": 107,
+      "delta": 1
+    },
+    {
+      "true": 2,
+      "pred": 1,
+      "n": 103,
+      "delta": 1
+    },
+    {
+      "true": 1,
+      "pred": 2,
+      "n": 62,
+      "delta": 1
+    },
+    {
+      "true": 2,
+      "pred": 3,
+      "n": 37,
+      "delta": 1
+    },
+    {
+      "true": 2,
+      "pred": 0,
+      "n": 28,
+      "delta": 2
+    },
+    {
+      "true": 3,
+      "pred": 2,
+      "n": 21,
+      "delta": 1
+    },
+    {
+      "true": 3,
+      "pred": 4,
+      "n": 21,
+      "delta": 1
+    },
+    {
+      "true": 0,
+      "pred": 2,
+      "n": 12,
+      "delta": 2
+    },
+    {
+      "true": 3,
+      "pred": 1,
+      "n": 2,
+      "delta": 2
+    },
+    {
+      "true": 4,
+      "pred": 3,
+      "n": 2,
+      "delta": 1
+    }
+  ],
+  "prior_gradcam_on_native_errors": {
+    "dir": "gradcam_errors_attn_spatial_test",
+    "mean_band_combined": 0.7867137588453654,
+    "mean_band_global": 0.7460834646308594,
+    "mean_band_local": 0.9258925232654281,
+    "note": "same weights; cutpoints do not change CAM"
+  }
+}

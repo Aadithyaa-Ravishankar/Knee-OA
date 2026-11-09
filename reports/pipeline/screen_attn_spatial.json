@@ -1,0 +1,49 @@
+{
+  "baseline": "r50_dual_cascade_sqrt_aux",
+  "band_mass_uniform_baseline": 0.2784797512754547,
+  "n_cam_images": 40,
+  "win_rule": "mean_qwk > baseline AND mean_global_band_mass > baseline",
+  "rows": [
+    {
+      "run": "r50_dual_cascade_sqrt_aux",
+      "n_folds_done": 5,
+      "mean_qwk": 0.8402176857296156,
+      "fold_qwks": [
+        0.8367327550991326,
+        0.8505158710905688,
+        0.8384923650936226,
+        0.8508851131357903,
+        0.8244623242289645
+      ],
+      "mean_global_band_mass": 0.45545722647932624,
+      "mean_global_border_mass": 0.1772052067679763,
+      "mean_local_band_mass": 0.7482694250447197,
+      "n_cam": 40,
+      "cam_fold": 0,
+      "beats_baseline": false
+    },
+    {
+      "run": "r50_dual_cascade_sqrt_aux_attn_spatial",
+      "n_folds_done": 5,
+      "mean_qwk": 0.8386205973268412,
+      "fold_qwks": [
+        0.8425807763959687,
+        0.8459951713312039,
+        0.8385198473705493,
+        0.8402813196252651,
+        0.8257258719112188
+      ],
+      "mean_global_band_mass": 0.7506061462754934,
+      "mean_global_border_mass": 0.052880431052480324,
+      "mean_local_band_mass": 0.9502521040388361,
+      "n_cam": 40,
+      "cam_fold": 0,
+      "beats_baseline": true
+    }
+  ],
+  "ranked": [
+    "r50_dual_cascade_sqrt_aux_attn_spatial",
+    "r50_dual_cascade_sqrt_aux"
+  ],
+  "winner": "r50_dual_cascade_sqrt_aux_attn_spatial"
+}

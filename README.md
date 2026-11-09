@@ -32,51 +32,24 @@ The four key pillars of the framework:
 ## Project Structure
 
 ```
-knee_oa_xai/
-│
-├── configs/
-│   └── config.yaml              # Central config (paths, hyperparams)
-│
-├── data/
-│   └── raw/                     # Placeholder — put dataset HERE (see DATASET_SETUP.md)
-│
+Knee-OA/
+├── docs/PIPELINE_STAGES.md      # Canonical Stage 1–11 numbering
 ├── src/
-│   ├── preprocessing/
-│   │   ├── dataset.py           # PyTorch Dataset class
-│   │   ├── transforms.py        # CLAHE + Normalize transforms
-│   │   ├── dataloader.py        # Weighted DataLoader factory
-│   │   ├── compute_stats.py     # Compute mean/std from training split
-│   │   └── stage1_dataset_audit.py   # Stage 1 audit script
-│   │
-│   ├── models/
-│   │   └── baseline.py          # ResNet-50 baseline (Stage 3)
-│   │
-│   ├── evaluation/
-│   │   └── metrics.py           # QWK, Macro-F1, confusion matrix
-│   │
-│   ├── training/
-│   │   └── stage3_train_baseline.py  # Stage 3 training script
-│   │
-│   ├── localization/            # Stage TBD — knee region localization
-│   ├── losses/                  # Stage TBD — ordinal loss functions
-│   ├── xai/                     # Stage TBD — Grad-CAM
-│   └── uncertainty/             # Stage TBD — MC Dropout
-│
-├── outputs/
-│   ├── figures/                 # Dataset visualizations
-│   ├── metrics/                 # Audit CSVs
-│   ├── models/                  # Saved model checkpoints (.pth)
-│   └── heatmaps/                # Grad-CAM outputs (Stage TBD)
-│
-├── reports/
-│   ├── stage1/                  # Dataset audit report + figures
-│   ├── stage2/                  # Normalization stats + preprocessing report
-│   └── stage3/                  # Training curves + confusion matrices
-│
+│   ├── preprocessing/           # Stage 1–2 (+ fold feature builders)
+│   ├── models/                  # OrdinalNet dual-stream (champion)
+│   ├── losses/                  # Ordinal / cascade losses
+│   ├── evaluation/              # Metrics, decoding, Grad-CAM, ESS, ECE
+│   └── training/                # stage4–11 CV / decode / XAI / UQ scripts
+├── outputs/cv/runs/             # 5-fold champion weights
+├── reports/pipeline/            # Folds, finals, Grad-CAM, consistency, UQ
+├── kaggle/                      # Train notebook + code/data bundles
+├── Dataset_combined/            # Local data (not in git)
 ├── requirements.txt
-├── DATASET_SETUP.md             # ← READ THIS FIRST
+├── DATASET_SETUP.md
 └── README.md
 ```
+
+See **[docs/PIPELINE_STAGES.md](docs/PIPELINE_STAGES.md)** for the full Stage 1–11 map.
 
 ---
 
@@ -102,21 +75,32 @@ pip install -r requirements.txt
 
 ### 4. Run the dataset audit (Stage 1)
 ```bash
-python3 src/preprocessing/stage1_dataset_audit.py
-# Output → reports/stage1/
+python src/preprocessing/stage1_dataset_audit.py
 ```
 
-### 5. Compute normalization stats (Stage 2)
+### 5. Locked-test style inference (Stages 6–7)
 ```bash
-python3 src/preprocessing/compute_stats.py
-# Output → reports/stage2/normalization_stats.json
+python src/training/stage7_final_test.py \
+  --run-name r50_dual_cascade_sqrt_aux_attn_spatial \
+  --runs-dir outputs/cv/runs \
+  --decode expected_cutpoints \
+  --i-understand-this-is-the-final-test
 ```
 
-### 6. Train the baseline model (Stage 3)
+### 6. Grad-CAM proof on correct grades (Stage 8)
 ```bash
-python3 src/training/stage3_train_baseline.py
-# Output → outputs/models/baseline_resnet50_best.pth
-#           reports/stage3/
+python src/training/stage8_gradcam.py \
+  --run-name r50_dual_cascade_sqrt_aux_attn_spatial \
+  --runs-dir outputs/cv/runs \
+  --split test --errors correct --decode expected_cutpoints --n 40 --cam-folds 0 \
+  --out reports/pipeline/gradcam_correct_attn_spatial_cutpoints
+```
+
+### 7. Consistency / uncertainty / ablation (Stages 9–11)
+```bash
+python src/training/stage9_explanation_consistency.py --n 200 --decode expected_cutpoints
+python src/training/stage10_uncertainty.py --n-passes 30 --decode expected_cutpoints
+python src/training/stage11_ablation_report.py
 ```
 
 ---
@@ -124,13 +108,18 @@ python3 src/training/stage3_train_baseline.py
 ## Implementation Stages
 
 | Stage | Status | Description |
-|-------|--------|-------------|
-| Stage 1 | ✅ Complete | Dataset audit — 9,786 images, KL-0..4, no leakage |
-| Stage 2 | ✅ Complete | Preprocessing pipeline — CLAHE, normalize, weighted sampler |
-| Stage 3 | 🔄 In Progress | Baseline ResNet-50 training + evaluation |
-| Stage 4 | ⬜ Planned | Dual-stream architecture + ordinal loss |
-| Stage 5 | ⬜ Planned | Grad-CAM explainability |
-| Stage 6 | ⬜ Planned | Explanation consistency + uncertainty quantification |
+|------:|--------|-------------|
+| 1 | ✅ | Dataset audit |
+| 2 | ✅ | Preprocessing (CLAHE, normalize, loaders) |
+| 3 | ✅ | Early dual-cascade / baseline era |
+| 4 | ✅ | Patient-grouped 5-fold CV + OOF |
+| 5 | ✅ | OARSI aux (JSN/ost) multi-task |
+| 6 | ✅ | Joint-focus champion (`attn_spatial`) |
+| 7 | ✅ | Expected-grade cutpoints + locked test (**QWK 0.867**) |
+| 8 | ✅ | Grad-CAM explainability |
+| 9 | ✅ | Explanation consistency (AFS / ESS / grade flip) |
+| 10 | ✅ | Uncertainty & calibration (MC Dropout / ECE) |
+| 11 | ✅ | Ablation reporting (artifact table) |
 
 ---
 
@@ -171,13 +160,13 @@ For academic and research use only.
 
 ---
 
-## Champion model (Stage 6)
+## Champion model (Stages 6–7)
 
-Best checkpoint: `outputs/models/CHAMPION_stage6_cascade.pth` (Git LFS)
+| Item | Value |
+|------|-------|
+| Weights | `outputs/cv/runs/r50_dual_cascade_sqrt_aux_attn_spatial/` (5-fold) |
+| Decode | Expected-grade cutpoints (fit on OOF) |
+| Locked-test QWK | **0.8673** |
+| Report | `reports/pipeline/final_test_r50_dual_cascade_sqrt_aux_attn_spatial_expected_cutpoints.json` |
 
-| Card | Test QWK | Notes |
-|------|----------|-------|
-| Champion (raw) | **0.8417** | Dual-stream cascade, all test cases |
-| Clinical deploy | **0.8777** covered | Stage 10: temp + severe-protect + abstain @ 81.8% coverage |
-
-See `RELEASE_MANIFEST.md` for the curated file list and how to run Stage 10 clinical deploy.
+See `docs/PIPELINE_STAGES.md` and `RELEASE_MANIFEST.md`.
