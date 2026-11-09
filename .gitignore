@@ -39,7 +39,10 @@ __pycache__/
 
 # ── Jupyter / IPython ─────────────────────────────────────────
 .ipynb_checkpoints/
+# Ignore local notebooks; keep the Kaggle train notebook tracked
+notebooks/**/*.ipynb
 *.ipynb
+!kaggle/**/*.ipynb
 
 # ── macOS ─────────────────────────────────────────────────────
 .DS_Store
@@ -61,6 +64,11 @@ reports/stage1/full_inventory.csv
 
 # ── Torch hub cache ───────────────────────────────────────────
 ~/.cache/torch/
+
+# ── Kaggle upload zips + local CV run caches ──────────────────
+kaggle/bundle/
+outputs/cv/runs/
+outputs/cv/smoke/
 
 # ── Logs ──────────────────────────────────────────────────────
 *.log

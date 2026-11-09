@@ -135,24 +135,40 @@ def get_eval_transforms_1ch(
 def get_train_transforms_3ch(
     mean: list[float] = TRAIN_MEAN_3CH,
     std:  list[float] = TRAIN_STD_3CH,
+    horizontal_flip: bool = True,
+    aug_interp: str = "nearest",
+    random_erasing: bool = True,
 ) -> T.Compose:
     """
     Training transforms — 3-channel output (for ImageNet-pretrained ResNet-50).
 
     On-the-fly aug (train only): flip, small rotation, brightness/contrast.
-    Eval transforms stay unaugmented.
+    Set horizontal_flip=False when the dataset flips the image and swaps R/L together
+    (medial/lateral streams).
+    aug_interp: RandomAffine interpolation — "nearest" (default, backward compatible) or "bilinear".
     """
-    return T.Compose([
-        ApplyCLAHE(clip_limit=2.0, tile_size=(8, 8)),
-        T.RandomHorizontalFlip(p=0.5),
-        T.RandomAffine(degrees=12, translate=(0.05, 0.05), scale=(0.9, 1.1), fill=0),
+    if aug_interp == "nearest":
+        interp = T.InterpolationMode.NEAREST
+    elif aug_interp == "bilinear":
+        interp = T.InterpolationMode.BILINEAR
+    else:
+        raise ValueError(f"aug_interp must be nearest|bilinear, got {aug_interp!r}")
+    steps = [ApplyCLAHE(clip_limit=2.0, tile_size=(8, 8))]
+    if horizontal_flip:
+        steps.append(T.RandomHorizontalFlip(p=0.5))
+    steps += [
+        T.RandomAffine(
+            degrees=12, translate=(0.05, 0.05), scale=(0.9, 1.1), fill=0, interpolation=interp,
+        ),
         T.ColorJitter(brightness=0.2, contrast=0.2),
         T.ToTensor(),
         GrayscaleToRGB(),
         T.Normalize(mean=mean, std=std),
+    ]
+    if random_erasing:
         # Mild occlusion regularizer (after normalize; fill with 0 == mean)
-        T.RandomErasing(p=0.25, scale=(0.02, 0.12), ratio=(0.3, 3.3), value=0.0),
-    ])
+        steps.append(T.RandomErasing(p=0.25, scale=(0.02, 0.12), ratio=(0.3, 3.3), value=0.0))
+    return T.Compose(steps)
 
 
 def get_eval_transforms_3ch(

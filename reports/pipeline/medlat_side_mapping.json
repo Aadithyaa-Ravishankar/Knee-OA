@@ -1,0 +1,28 @@
+{
+  "medial_is_image_left_for_r": false,
+  "chosen_from": "medial_only",
+  "rule": "For R knees, medial = image-right half",
+  "ambiguous": false,
+  "cohorts_agree": false,
+  "medial_only": {
+    "n_candidates": 793,
+    "n_measured": 782,
+    "n_R": 368,
+    "n_L": 414,
+    "R_fraction_image_left_smaller_gap": 0.2418478260869565,
+    "L_fraction_image_left_smaller_gap": 0.8043478260869565,
+    "R_majority_agreement": 0.7581521739130435,
+    "implies_medial_is_image_left_for_r": false
+  },
+  "lateral_only": {
+    "n_candidates": 227,
+    "n_measured": 210,
+    "n_R": 125,
+    "n_L": 85,
+    "R_fraction_image_left_smaller_gap": 0.352,
+    "L_fraction_image_left_smaller_gap": 0.6588235294117647,
+    "R_majority_agreement": 0.648,
+    "implies_medial_is_image_left_for_r": true
+  },
+  "L_consistent_with_R_mirror_on_medial_only": true
+}

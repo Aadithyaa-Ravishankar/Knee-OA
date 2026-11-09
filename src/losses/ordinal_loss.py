@@ -66,6 +66,68 @@ class CORNLoss(nn.Module):
         return torch.stack(losses).mean()
 
 
+class WeightedCORNLoss(nn.Module):
+    """
+    CORN with per-threshold weights.
+
+    For OA remapped grades 0..3 (= KL 1..4), thresholds are:
+      t0: >0  (KL1 | KL2+)   — often down-weighted (ambiguous 1↔2)
+      t1: >1  (KL2 | KL3+)   — protect severe entry
+      t2: >2  (KL3 | KL4)    — protect KL-3/4 split
+    """
+
+    def __init__(
+        self,
+        num_classes: int = 4,
+        threshold_weights: tuple[float, ...] | None = None,
+    ) -> None:
+        super().__init__()
+        if num_classes < 2:
+            raise ValueError("num_classes must be >= 2")
+        self.num_classes = num_classes
+        self.n_thresholds = num_classes - 1
+        if threshold_weights is None:
+            threshold_weights = tuple(1.0 for _ in range(self.n_thresholds))
+        if len(threshold_weights) != self.n_thresholds:
+            raise ValueError(
+                f"threshold_weights length {len(threshold_weights)} != {self.n_thresholds}"
+            )
+        self.register_buffer(
+            "thr_w",
+            torch.tensor(threshold_weights, dtype=torch.float32),
+            persistent=False,
+        )
+
+    def forward(
+        self,
+        logits: torch.Tensor,
+        labels: torch.Tensor,
+        soft_targets: torch.Tensor | None = None,
+    ) -> torch.Tensor:
+        if logits.shape[1] != self.n_thresholds:
+            raise ValueError(
+                f"Expected logits with {self.n_thresholds} cols, got {logits.shape[1]}"
+            )
+        if soft_targets is not None:
+            targets = soft_targets.clamp(0.0, 1.0)
+        else:
+            labels = labels.long()
+            targets = torch.stack(
+                [(labels > k).float() for k in range(self.n_thresholds)],
+                dim=1,
+            )
+        losses = torch.stack(
+            [
+                F.binary_cross_entropy_with_logits(
+                    logits[:, k], targets[:, k], reduction="mean"
+                )
+                for k in range(self.n_thresholds)
+            ]
+        )
+        w = self.thr_w.to(device=losses.device, dtype=losses.dtype)
+        return (losses * w).sum() / w.sum().clamp(min=1e-8)
+
+
 def corn_threshold_targets(labels: torch.Tensor, n_thresholds: int = 4) -> torch.Tensor:
     """Hard CORN targets (B, K-1): 1 if label > k else 0."""
     labels = labels.long()

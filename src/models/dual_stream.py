@@ -39,6 +39,39 @@ def center_zoom(x: torch.Tensor, frac: float = 0.72) -> torch.Tensor:
     return out.squeeze(0) if squeeze else out
 
 
+def medlat_crops(
+    x: torch.Tensor,
+    side: torch.Tensor,
+    frac: float = 0.72,
+    medial_is_image_left_for_r: bool = True,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """
+    Central joint band split into medial and lateral halves, each resized to HxW.
+
+    side : (B,) long with 0=L, 1=R. Mapping comes from verify_medlat_side.py.
+    """
+    if x.dim() != 4:
+        raise ValueError("medlat_crops expects (B, C, H, W)")
+    b, c, h, w = x.shape
+    frac = float(min(max(frac, 0.4), 0.95))
+    ch, cw = int(round(h * frac)), int(round(w * frac))
+    top, left = (h - ch) // 2, (w - cw) // 2
+    band = x[:, :, top : top + ch, left : left + cw]
+    mid = cw // 2
+    left_h, right_h = band[:, :, :, :mid], band[:, :, :, mid:]
+    left_z = F.interpolate(left_h, size=(h, w), mode="bilinear", align_corners=False)
+    right_z = F.interpolate(right_h, size=(h, w), mode="bilinear", align_corners=False)
+    # For R: medial on image-left iff medial_is_image_left_for_r; L is the mirror.
+    medial_is_left = torch.where(
+        side.long() == 1,
+        torch.full((b,), medial_is_image_left_for_r, device=x.device, dtype=torch.bool),
+        torch.full((b,), not medial_is_image_left_for_r, device=x.device, dtype=torch.bool),
+    )
+    medial = torch.where(medial_is_left[:, None, None, None], left_z, right_z)
+    lateral = torch.where(medial_is_left[:, None, None, None], right_z, left_z)
+    return medial, lateral
+
+
 class DualStreamResNet50(nn.Module):
     """
     Shared ResNet-50 trunk with global + local (joint zoom) streams.

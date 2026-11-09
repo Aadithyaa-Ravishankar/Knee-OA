@@ -1,6 +1,7 @@
 """Loss functions for Knee OA grading."""
 from .ordinal_loss import (
     CORNLoss,
+    WeightedCORNLoss,
     corn_predict,
     corn_probs,
     corn_threshold_targets,
@@ -9,6 +10,7 @@ from .ordinal_loss import (
 
 __all__ = [
     "CORNLoss",
+    "WeightedCORNLoss",
     "corn_predict",
     "corn_probs",
     "corn_threshold_targets",

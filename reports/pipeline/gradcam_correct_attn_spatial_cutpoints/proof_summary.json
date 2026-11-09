@@ -1,0 +1,22 @@
+{
+  "meta": {
+    "run_name": "r50_dual_cascade_sqrt_aux_attn_spatial",
+    "split": "test",
+    "decode": "expected_cutpoints",
+    "cam_folds": [
+      0
+    ],
+    "mean_band_combined": 0.7785370539281228,
+    "mean_band_global": 0.7466412918366019,
+    "mean_band_local": 0.9097240334246095,
+    "band_mass_uniform_baseline": 0.2784797512754547
+  },
+  "n": 40,
+  "by_kl": {
+    "0": 8,
+    "1": 8,
+    "2": 8,
+    "3": 8,
+    "4": 8
+  }
+}

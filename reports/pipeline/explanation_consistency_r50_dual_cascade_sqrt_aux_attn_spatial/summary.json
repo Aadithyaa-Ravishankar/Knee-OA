@@ -1,0 +1,39 @@
+{
+  "stage": 9,
+  "run_name": "r50_dual_cascade_sqrt_aux_attn_spatial",
+  "split": "test",
+  "decode": "expected_cutpoints",
+  "pred_folds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "cam_fold": 0,
+  "n_requested": 200,
+  "perturbations": [
+    "brightness_0.95",
+    "brightness_1.05",
+    "noise_0.01"
+  ],
+  "summary": {
+    "n": 200,
+    "mean_afs_combined": 0.7765285773237648,
+    "mean_afs_global": 0.7271078441616625,
+    "mean_afs_local": 0.9261692107389188,
+    "frac_afs_gt_0_5": 0.97,
+    "mean_ess": 0.9471153269715018,
+    "frac_ess_gt_0_85": 0.98,
+    "grade_flip_rate": 0.11,
+    "band_mass_uniform_baseline": 0.2784797512754547,
+    "targets": {
+      "afs_gt": 0.5,
+      "ess_gt": 0.85,
+      "grade_flip_lt": 0.05
+    },
+    "pass_afs": true,
+    "pass_ess": true,
+    "pass_grade_flip": false
+  }
+}
