@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Knee OA — Classify</title>
+  <link rel="stylesheet" href="/static/css/style.css"/>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav class="topnav">
+  <a class="nav-brand" href="/">
+    <div class="brand-icon">🦴</div>
+    <div>
+      <div class="brand-title">Knee OA · XAI</div>
+      <div class="brand-sub">Explainable Severity Grading</div>
+    </div>
+  </a>
+  <div class="nav-links">
+    <a href="/" class="active">Classify</a>
+    <a href="/pipeline">Pipeline</a>
+  </div>
+</nav>
+
+<!-- Main -->
+<div class="page-container">
+
+  <div class="page-header">
+    <h1>Knee X-ray <em>Severity Classification</em></h1>
+    <p class="sub">Upload a plain anteroposterior knee X-ray and the model will grade it on the Kellgren–Lawrence (KL-0 to KL-4) scale — with a visual explanation.</p>
+  </div>
+
+  <!-- Upload card -->
+  <div class="card">
+    <div class="card-title"><span class="icon">📂</span> Upload X-ray Image</div>
+
+    <div class="upload-zone" id="uploadZone">
+      <input type="file" id="fileInput" accept="image/*"/>
+      <div class="upload-icon">🩻</div>
+      <p>Drag &amp; drop your X-ray here, or <u>browse</u></p>
+      <small>Accepts PNG, JPG, TIFF · Max 16 MB · Grayscale or RGB</small>
+    </div>
+
+    <div class="preview-wrap" id="previewWrap">
+      <img id="previewImg" src="" alt="Preview"/>
+      <div class="preview-label"><em>Uploaded image preview</em></div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-primary" id="analyseBtn" disabled>
+        <span>🔬</span> Analyse X-ray
+      </button>
+    </div>
+
+    <div class="spinner" id="spinner"></div>
+    <div class="loading-text" id="loadingText">Running model and generating explanation…</div>
+    <div class="error-banner" id="errorBanner"></div>
+  </div><!-- /card -->
+
+  <!-- Result section -->
+  <div id="result-section">
+
+    <hr class="section-divider"/>
+
+    <!-- Grade + probs -->
+    <div class="card">
+      <div class="card-title"><span class="icon">📊</span> Classification Result</div>
+
+      <div id="gradeBadgeWrap"></div>
+
+      <div class="result-grid">
+
+        <!-- Left: probabilities -->
+        <div>
+          <div class="result-col-label">Confidence per Grade</div>
+          <div id="probBars"></div>
+          <div class="meta-row" id="metaRow"></div>
+        </div>
+
+        <!-- Right: plain-English explanation -->
+        <div>
+          <div class="result-col-label">What the model found</div>
+          <div class="explanation-box" id="explanationBox"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Grad-CAM -->
+    <div class="card">
+      <div class="card-title"><span class="icon">🗺️</span> Explanation Heatmap <span style="font-family:var(--font-serif);font-style:italic;font-weight:400;font-size:.95rem;color:var(--text-muted);">&nbsp;— Grad-CAM</span></div>
+
+      <div class="result-grid">
+
+        <div>
+          <div class="result-col-label">Gradient-weighted Activation Map</div>
+          <div class="gradcam-wrap">
+            <img id="gradcamImg" src="" alt="Grad-CAM heatmap"/>
+          </div>
+          <div class="gradcam-legend">
+            <span>Low activation</span>
+            <div class="legend-bar"></div>
+            <span>High activation</span>
+          </div>
+        </div>
+
+        <div>
+          <div class="result-col-label">How to read this</div>
+          <div class="explanation-box" style="font-size:.95rem;">
+            <em>Bright (red/yellow)</em> regions contributed most to the grade prediction.
+            <br/><br/>
+            In a well-calibrated model, these hot spots should sit over the
+            <em>joint space</em> — the gap between femur and tibia — where
+            osteoarthritis changes are visible. Cool blue regions were largely
+            ignored by the model.
+            <br/><br/>
+            Our champion model achieves a mean <em>Anatomy Focus Score of 0.777</em>
+            — 97% of test images have more than 50% of their heat inside the
+            knee joint region.
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- /result-section -->
+
+</div><!-- /page-container -->
+
+<footer>
+  <strong>Anatomy-Aware XAI · Knee OA Severity Grading</strong>
+  &nbsp;·&nbsp; Aadithyaa R · Mohanapriya V · Sneha S R
+  &nbsp;·&nbsp; <em>SRM Institute of Science and Technology</em>
+  &nbsp;·&nbsp; <em>Not for clinical use — research prototype only.</em>
+</footer>
+
+<script>
+/* ── Grade palette ─────────────────────────────────── */
+const GRADE_COLORS = ['#4a7c59','#7a9e7e','#c4a35a','#b5651d','#8b2c2c'];
+const GRADE_NAMES  = ['KL-0  Normal','KL-1  Doubtful','KL-2  Mild','KL-3  Moderate','KL-4  Severe'];
+
+/* ── Upload & Preview ──────────────────────────────── */
+const fileInput  = document.getElementById('fileInput');
+const uploadZone = document.getElementById('uploadZone');
+const previewWrap= document.getElementById('previewWrap');
+const previewImg = document.getElementById('previewImg');
+const analyseBtn = document.getElementById('analyseBtn');
+
+let selectedFile = null;
+
+fileInput.addEventListener('change', e => setFile(e.target.files[0]));
+
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', ()=> uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('drag-over');
+  setFile(e.dataTransfer.files[0]);
+});
+
+function setFile(f) {
+  if (!f) return;
+  selectedFile = f;
+  const url = URL.createObjectURL(f);
+  previewImg.src = url;
+  previewWrap.style.display = 'block';
+  uploadZone.style.display  = 'none';
+  analyseBtn.disabled = false;
+  document.getElementById('result-section').style.display = 'none';
+  document.getElementById('errorBanner').style.display    = 'none';
+}
+
+/* ── Analyse ────────────────────────────────────────── */
+analyseBtn.addEventListener('click', () => {
+  if (!selectedFile) return;
+  document.getElementById('spinner').style.display      = 'block';
+  document.getElementById('loadingText').style.display  = 'block';
+  document.getElementById('errorBanner').style.display  = 'none';
+  document.getElementById('result-section').style.display = 'none';
+  analyseBtn.disabled = true;
+
+  const form = new FormData();
+  form.append('file', selectedFile);
+
+  fetch('/predict', { method: 'POST', body: form })
+    .then(r => r.json())
+    .then(data => {
+      document.getElementById('spinner').style.display     = 'none';
+      document.getElementById('loadingText').style.display = 'none';
+      analyseBtn.disabled = false;
+
+      if (data.error) {
+        const eb = document.getElementById('errorBanner');
+        eb.textContent = '⚠ ' + data.error;
+        eb.style.display = 'block';
+        return;
+      }
+      renderResult(data);
+    })
+    .catch(err => {
+      document.getElementById('spinner').style.display     = 'none';
+      document.getElementById('loadingText').style.display = 'none';
+      analyseBtn.disabled = false;
+      const eb = document.getElementById('errorBanner');
+      eb.textContent = '⚠ Network error: ' + err.message;
+      eb.style.display = 'block';
+    });
+});
+
+/* ── Render Result ──────────────────────────────────── */
+function renderResult(d) {
+  const color = d.severity_color || GRADE_COLORS[d.grade];
+  const shortNames = ['Normal','Doubtful','Mild','Moderate','Severe'];
+
+  // Grade badge
+  document.getElementById('gradeBadgeWrap').innerHTML =
+    `<div class="grade-badge" style="background:${color}">
+       KL-${d.grade} &nbsp;—&nbsp; ${shortNames[d.grade]}
+     </div>`;
+
+  // Probability bars
+  const bars = d.probs.map((p, i) => {
+    const pct = Math.round(p * 100);
+    return `<div class="prob-row">
+      <div class="prob-label">${['KL-0','KL-1','KL-2','KL-3','KL-4'][i]}</div>
+      <div class="prob-track">
+        <div class="prob-fill" style="width:${pct}%;background:${GRADE_COLORS[i]}"></div>
+      </div>
+      <div class="prob-pct">${pct}%</div>
+    </div>`;
+  }).join('');
+  document.getElementById('probBars').innerHTML = bars;
+
+  // Meta pills
+  const conf = Math.round(d.probs[d.grade] * 100);
+  let metaHtml = `
+    <div class="meta-pill">🎯 Confidence&nbsp;<b>${conf}%</b></div>
+    <div class="meta-pill">📉 Entropy&nbsp;<b>${d.entropy.toFixed(3)}</b></div>`;
+  if (d.demo_mode)
+    metaHtml += `<div class="meta-pill demo-pill">⚠ Demo mode — model weights not found</div>`;
+  document.getElementById('metaRow').innerHTML = metaHtml;
+
+  // Explanation
+  document.getElementById('explanationBox').innerHTML = d.explanation;
+
+  // Grad-CAM
+  document.getElementById('gradcamImg').src = 'data:image/png;base64,' + d.gradcam_b64;
+
+  // Show
+  document.getElementById('result-section').style.display = 'block';
+  document.getElementById('result-section').scrollIntoView({ behavior:'smooth', block:'start' });
+}
+</script>
+</body>
+</html>

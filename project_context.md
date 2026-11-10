@@ -828,3 +828,4 @@ model:
 ---
 
 *This document is the single source of truth for the project's research context, motivation, architecture, and implementation plan. Update it as the project progresses.*
+

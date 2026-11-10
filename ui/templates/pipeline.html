@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Knee OA — Pipeline</title>
+  <link rel="stylesheet" href="/static/css/style.css"/>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav class="topnav">
+  <a class="nav-brand" href="/">
+    <div class="brand-icon">🦴</div>
+    <div>
+      <div class="brand-title">Knee OA · XAI</div>
+      <div class="brand-sub">Explainable Severity Grading</div>
+    </div>
+  </a>
+  <div class="nav-links">
+    <a href="/">Classify</a>
+    <a href="/pipeline" class="active">Pipeline</a>
+  </div>
+</nav>
+
+<!-- Main -->
+<div class="page-container">
+
+  <div class="page-header">
+    <h1>The <em>Seven-Step</em> Pipeline</h1>
+    <p class="sub">Every X-ray you submit passes through each of these stages — from raw pixels to an explained, uncertainty-aware KL grade.</p>
+  </div>
+
+  <!-- Stage 1 ─────────────────────────────────────────────── -->
+  <div class="card">
+  <div class="pipeline-step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <div class="step-name">Image Preprocessing</div>
+      <div class="step-tech">Technique: CLAHE + Z-score Normalisation</div>
+      <div class="step-desc">
+        The raw X-ray is resized to <em>224 × 224 pixels</em> and converted to
+        grayscale. <em>CLAHE (Contrast-Limited Adaptive Histogram Equalisation)</em>
+        is then applied with a clip limit of 2.0 and 8×8 tiles — this locally
+        boosts contrast in bone and cartilage regions while suppressing scanner
+        noise and over-bright scanner backgrounds.
+        <br/><br/>
+        Finally the pixel values are normalised using the
+        <em>training-set mean (0.579) and standard deviation (0.145)</em>
+        computed by Welford's online algorithm over 5,778 training images.
+        The single grayscale channel is repeated three times so the
+        image can be fed to an ImageNet-pretrained ResNet-50 backbone.
+      </div>
+
+      <div class="step-images">
+        <div class="step-img-wrap">
+          <img src="/panels/KL0/9059837R_panel.png" alt="Preprocessed KL-0 panel" onerror="this.style.display='none'"/>
+          <span><em>KL-0</em> — raw → CLAHE → Grad-CAM</span>
+        </div>
+        <div class="step-img-wrap">
+          <img src="/panels/KL4/9048789L_panel.png" alt="Preprocessed KL-4 panel" onerror="this.style.display='none'"/>
+          <span><em>KL-4</em> — raw → CLAHE → Grad-CAM</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <!-- Stage 2 ─────────────────────────────────────────────── -->
+  <div class="card">
+  <div class="pipeline-step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <div class="step-name">Dual-Stream Feature Extraction</div>
+      <div class="step-tech">Technique: Dual-Stream ResNet-50 with Center Zoom</div>
+      <div class="step-desc">
+        A single ResNet-50 backbone is passed the same image <em>twice in parallel</em>:
+      </div>
+
+      <div class="metrics-row">
+        <div class="metric-box">
+          <span class="m-val">🌐</span>
+          <span class="m-label">Global Stream</span>
+        </div>
+        <div class="metric-box">
+          <span class="m-val">🔍</span>
+          <span class="m-label">Local Stream</span>
+        </div>
+        <div class="metric-box">
+          <span class="m-val">⊕</span>
+          <span class="m-label">Feature Fusion</span>
+        </div>
+      </div>
+
+      <div class="step-desc" style="margin-top:.85rem;">
+        The <em>global stream</em> sees the full 224×224 image — capturing overall
+        bone geometry, bilateral symmetry, and large deformities. The
+        <em>local stream</em> receives a 72%-centred crop that zooms into the
+        joint-space region, capturing fine-grained cartilage thinning and
+        osteophyte detail. The 2×2048-dimensional feature vectors are then
+        concatenated and projected through a dropout (p=0.3) and a linear layer
+        to form the shared representation.
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <!-- Stage 3 ─────────────────────────────────────────────── -->
+  <div class="card">
+  <div class="pipeline-step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <div class="step-name">Ordinal Severity Learning</div>
+      <div class="step-tech">Technique: Cascade Binary Head + CORN Ordinal Loss</div>
+      <div class="step-desc">
+        Instead of treating KL-0 through KL-4 as five independent categories,
+        the model uses a <em>cascade ordinal head</em>: one binary gate
+        (OA vs. No-OA) followed by three cumulative binary classifiers
+        (KL≥2, KL≥3, KL≥4). This architecture <em>encodes the natural ordering</em>
+        of disease severity — predicting KL-0 when the truth is KL-4 is penalised
+        far more heavily than a one-step error.
+        <br/><br/>
+        Multi-task auxiliary OARSI features (joint-space narrowing medial/lateral,
+        osteophyte medial/lateral) further guide the model to focus on the
+        anatomically meaningful signals.
+      </div>
+
+      <div class="kl-strip">
+        <div class="kl-chip" style="background:#4a7c59">KL-0 · Normal</div>
+        <div class="kl-chip" style="background:#7a9e7e">KL-1 · Doubtful</div>
+        <div class="kl-chip" style="background:#c4a35a">KL-2 · Mild</div>
+        <div class="kl-chip" style="background:#b5651d">KL-3 · Moderate</div>
+        <div class="kl-chip" style="background:#8b2c2c">KL-4 · Severe</div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <!-- Stage 4 ─────────────────────────────────────────────── -->
+  <div class="card">
+  <div class="pipeline-step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <div class="step-name">Training with Patient-Grouped 5-Fold Cross-Validation</div>
+      <div class="step-tech">Technique: Stratified Patient-Level K-Fold + Weighted Sampler</div>
+      <div class="step-desc">
+        The dataset contains <em>4,130 unique patients</em>, each contributing both
+        a left and right knee image. All images from the same patient are kept
+        in the same fold — preventing data leakage and ensuring generalisation
+        is measured at the patient level, not the image level.
+        <br/><br/>
+        Within each training fold a <em>WeightedRandomSampler</em> oversamples
+        rare KL-4 images (13× fewer than KL-0) so every mini-batch sees all
+        five grades. Class weights in the loss function reinforce this.
+        Five fold models are trained and their predictions are averaged at
+        inference (ensemble of five).
+      </div>
+
+      <div class="metrics-row">
+        <div class="metric-box">
+          <span class="m-val">5</span>
+          <span class="m-label">Folds</span>
+        </div>
+        <div class="metric-box">
+          <span class="m-val">4,130</span>
+          <span class="m-label">Patients</span>
+        </div>
+        <div class="metric-box">
+          <span class="m-val">9,786</span>
+          <span class="m-label">Images</span>
+        </div>
+        <div class="metric-box">
+          <span class="m-val">13×</span>
+          <span class="m-label">Class Imbalance</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <!-- Stage 5 ─────────────────────────────────────────────── -->
+  <div class="card">
+  <div class="pipeline-step">
+    <div class="step-num">5</div>
+    <div class="step-body">
+      <div class="step-name">Prediction &amp; Calibrated Decoding</div>
+      <div class="step-tech">Technique: Expected-Grade Decoding + OOF Cutpoint Calibration</div>
+      <div class="step-desc">
+        The five-fold ensemble produces a <em>probability vector</em>
+        [P(KL-0), …, P(KL-4)] by averaging logits across folds.
+        A simple <em>argmax</em> would not make best use of the ordinal
+        probability structure, so an <em>expected grade</em>
+        (the probability-weighted mean grade) is computed instead.
+        <br/><br/>
+        Four cut-points on this expected-grade scalar are then
+        <em>fit on out-of-fold (OOF) predictions</em> by coordinate search
+        maximising Quadratic Weighted Kappa. These OOF-tuned cut-points
+        (0.609 / 1.267 / 2.243 / 3.050) are applied at test time, lifting
+        the locked-test QWK from 0.861 (argmax) to <em>0.867</em>.
+      </div>
+
+      <div class="metrics-row">
+        <div class="metric-box"><span class="m-val">0.867</span><span class="m-label">Test QWK</span></div>
+        <div class="metric-box"><span class="m-val">0.695</span><span class="m-label">Macro-F1</span></div>
+        <div class="metric-box"><span class="m-val">69.1%</span><span class="m-label">Accuracy</span></div>
+        <div class="metric-box"><span class="m-val">96.1%</span><span class="m-label">KL-4 Recall</span></div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <!-- Stage 6 ─────────────────────────────────────────────── -->
+  <div class="card">
+  <div class="pipeline-step">
+    <div class="step-num">6</div>
+    <div class="step-body">
+      <div class="step-name">Explainability — Dual-Stream Grad-CAM</div>
+      <div class="step-tech">Technique: Per-Stream Gradient-Weighted Class Activation Mapping</div>
+      <div class="step-desc">
+        <em>Grad-CAM</em> computes the gradient of the target class score with
+        respect to the final convolutional feature map, global-average-pools
+        those gradients into per-channel importance weights, and linearly
+        combines the maps. Because this model runs the backbone <em>twice</em>
+        (global and local streams), a correct per-stream Grad-CAM is computed
+        separately for each pass using <code>autograd.grad</code> — preventing
+        gradient mixing between streams.
+        <br/><br/>
+        The local-stream CAM (computed in the zoomed coordinate frame) is
+        up-sampled and <em>pasted back</em> into the matching centre box of the
+        full image. The two maps are blended into a single combined heatmap
+        overlaid on the original X-ray.
+      </div>
+
+      <!-- Panel images from actual reports -->
+      <div class="step-desc" style="margin-bottom:.5rem;font-size:.8rem;font-style:italic;color:var(--text-muted);">
+        Sample Grad-CAM panels (Original · Global CAM · Local CAM · Combined) from the locked test set:
+      </div>
+      <div class="panel-strip">
+        <div class="panel-wrap">
+          <img src="/panels/KL0/9059837R_panel.png" alt="KL-0 panel" onerror="this.parentElement.style.display='none'"/>
+          <span><em>KL-0</em> Normal</span>
+        </div>
+        <div class="panel-wrap">
+          <img src="/panels/KL2/9225063R_panel.png" alt="KL-2 panel" onerror="this.parentElement.style.display='none'"/>
+          <span><em>KL-2</em> Mild OA</span>
+        </div>
+        <div class="panel-wrap">
+          <img src="/panels/KL3/9049706L_panel.png" alt="KL-3 panel" onerror="this.parentElement.style.display='none'"/>
+          <span><em>KL-3</em> Moderate OA</span>
+        </div>
+        <div class="panel-wrap">
+          <img src="/panels/KL4/9048789L_panel.png" alt="KL-4 panel" onerror="this.parentElement.style.display='none'"/>
+          <span><em>KL-4</em> Severe OA</span>
+        </div>
+      </div>
+
+      <div class="metrics-row" style="margin-top:1rem;">
+        <div class="metric-box"><span class="m-val">0.777</span><span class="m-label">Mean AFS</span></div>
+        <div class="metric-box"><span class="m-val">97%</span><span class="m-label">AFS &gt; 0.5</span></div>
+        <div class="metric-box"><span class="m-val">0.947</span><span class="m-label">Mean ESS (SSIM)</span></div>
+      </div>
+
+      <div class="step-desc" style="margin-top:.85rem;font-size:.85rem;">
+        <em>AFS (Anatomy Focus Score)</em> measures the fraction of Grad-CAM energy that falls within the
+        anatomically expected knee-joint band — 97% of test images exceed the 0.5 threshold.
+        <em>ESS (Explanation Stability Score)</em> is the SSIM between heatmaps under mild
+        image perturbations (±5% brightness, Gaussian noise) — mean 0.947 means explanations
+        are essentially unchanged by irrelevant image variations.
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <!-- Stage 7 ─────────────────────────────────────────────── -->
+  <div class="card">
+  <div class="pipeline-step" style="--last:true;">
+    <div class="step-num">7</div>
+    <div class="step-body" style="padding-bottom:0;">
+      <div class="step-name">Uncertainty Quantification</div>
+      <div class="step-tech">Technique: MC Dropout (N=30) + Expected Calibration Error</div>
+      <div class="step-desc">
+        A reliable clinical AI must know what it does not know. At inference time,
+        the dropout layers are kept <em>active</em> (training mode) while batch-norm
+        stays in eval mode. The model is run <em>30 times</em> on the same image —
+        each pass produces a slightly different probability vector because different
+        neurons are dropped each time.
+        <br/><br/>
+        The <em>variance across 30 passes</em> gives a per-sample uncertainty estimate.
+        High entropy → the model is uncertain → the case should be flagged for
+        expert review. KL-1 and KL-2 (the boundary grades) predictably show the
+        highest entropy, matching clinical expectation.
+        <br/><br/>
+        <em>ECE (Expected Calibration Error)</em> of 0.021 confirms the model's
+        confidence scores are well-calibrated: a prediction reported at 70% confidence
+        is correct roughly 70% of the time.
+      </div>
+
+      <!-- Reliability diagram -->
+      <div class="step-images">
+        <div class="step-img-wrap">
+          <img src="/uncertainty/reliability_mc.png"
+               alt="MC Dropout reliability diagram"
+               onerror="this.style.display='none'"/>
+          <span><em>MC Dropout</em> reliability diagram</span>
+        </div>
+        <div class="step-img-wrap">
+          <img src="/uncertainty/reliability_deterministic.png"
+               alt="Deterministic reliability diagram"
+               onerror="this.style.display='none'"/>
+          <span><em>Deterministic</em> ensemble reliability</span>
+        </div>
+      </div>
+
+      <div class="metrics-row" style="margin-top:1rem;">
+        <div class="metric-box"><span class="m-val">0.021</span><span class="m-label">ECE (MC)</span></div>
+        <div class="metric-box"><span class="m-val">0.693</span><span class="m-label">Mean Confidence</span></div>
+        <div class="metric-box"><span class="m-val">30</span><span class="m-label">MC Passes</span></div>
+        <div class="metric-box"><span class="m-val">0.677</span><span class="m-label">Mean Entropy</span></div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <!-- Summary metrics strip -->
+  <div class="card" style="margin-top:1.75rem; background: var(--accent-bg); border-color: var(--accent-lt);">
+    <div class="card-title" style="margin-bottom:.75rem;"><span class="icon">🏆</span> Champion Model — Final Results</div>
+    <div class="metrics-row">
+      <div class="metric-box"><span class="m-val">0.867</span><span class="m-label">Test QWK</span></div>
+      <div class="metric-box"><span class="m-val">0.695</span><span class="m-label">Macro-F1</span></div>
+      <div class="metric-box"><span class="m-val">0.777</span><span class="m-label">Mean AFS</span></div>
+      <div class="metric-box"><span class="m-val">0.947</span><span class="m-label">Mean ESS</span></div>
+      <div class="metric-box"><span class="m-val">0.021</span><span class="m-label">ECE</span></div>
+      <div class="metric-box"><span class="m-val">96.1%</span><span class="m-label">KL-4 Recall</span></div>
+    </div>
+    <p style="margin-top:1rem;font-size:.82rem;color:var(--text-muted);font-style:italic;">
+      Locked test set · 1,656 images · 5-fold ensemble (OrdinalNet ResNet-50 dual-stream cascade)
+      · OOF expected-grade cutpoints · Bootstrap CI patient-level.
+    </p>
+  </div>
+
+</div><!-- /page-container -->
+
+<footer>
+  <strong>Anatomy-Aware XAI · Knee OA Severity Grading</strong>
+  &nbsp;·&nbsp; Aadithyaa R · Mohanapriya V · Sneha S R
+  &nbsp;·&nbsp; <em>SRM Institute of Science and Technology</em>
+  &nbsp;·&nbsp; <em>Not for clinical use — research prototype only.</em>
+</footer>
+
+</body>
+</html>
